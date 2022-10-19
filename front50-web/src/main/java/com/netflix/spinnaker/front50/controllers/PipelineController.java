@@ -21,11 +21,16 @@ import static java.lang.String.format;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
+import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator;
+import com.netflix.spinnaker.fiat.shared.FiatService;
+import com.netflix.spinnaker.fiat.shared.FiatStatus;
 import com.netflix.spinnaker.front50.ServiceAccountsService;
 import com.netflix.spinnaker.front50.api.model.pipeline.Pipeline;
 import com.netflix.spinnaker.front50.api.model.pipeline.Trigger;
 import com.netflix.spinnaker.front50.api.validator.PipelineValidator;
 import com.netflix.spinnaker.front50.api.validator.ValidatorErrors;
+import com.netflix.spinnaker.front50.config.FiatConfigurationProperties;
+import com.netflix.spinnaker.front50.controllers.exception.PipelineAccessDeniedException;
 import com.netflix.spinnaker.front50.exception.BadRequestException;
 import com.netflix.spinnaker.front50.exceptions.DuplicateEntityException;
 import com.netflix.spinnaker.front50.exceptions.InvalidEntityException;
@@ -51,12 +56,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
 
 /** Controller for presets */
 @RestController
@@ -75,12 +78,21 @@ public class PipelineController {
       ObjectMapper objectMapper,
       Optional<ServiceAccountsService> serviceAccountsService,
       List<PipelineValidator> pipelineValidators,
-      Optional<PipelineTemplateDAO> pipelineTemplateDAO) {
+      Optional<PipelineTemplateDAO> pipelineTemplateDAO,
+      FiatPermissionEvaluator fiatPermissionEvaluator,
+      Optional<FiatService> fiatService,
+      FiatConfigurationProperties fiatConfigurationProperties,
+      FiatStatus fiatStatus) {
+
     this.pipelineDAO = pipelineDAO;
     this.objectMapper = objectMapper;
     this.serviceAccountsService = serviceAccountsService;
     this.pipelineValidators = pipelineValidators;
     this.pipelineTemplateDAO = pipelineTemplateDAO;
+    this.fiatPermissionEvaluator = fiatPermissionEvaluator;
+    this.fiatService = fiatService;
+    this.fiatConfigurationProperties = fiatConfigurationProperties;
+    this.fiatStatus = fiatStatus;
   }
 
   @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
@@ -89,91 +101,12 @@ public class PipelineController {
   public Collection<Pipeline> list(
       @RequestParam(required = false, value = "restricted", defaultValue = "true")
           boolean restricted,
-      @RequestParam(required = false, value = "refresh", defaultValue = "true") boolean refresh,
-      @RequestParam(required = false, value = "enabledPipelines") Boolean enabledPipelines,
-      @RequestParam(required = false, value = "enabledTriggers") Boolean enabledTriggers,
-      @RequestParam(required = false, value = "triggerTypes") String triggerTypes) {
-    Collection<Pipeline> pipelines = pipelineDAO.all(refresh);
-
-    if ((enabledPipelines == null) && (enabledTriggers == null) && (triggerTypes == null)) {
-      // no filtering, return all pipelines
-      return pipelines;
-    }
-
-    List<String> triggerTypeList =
-        (triggerTypes != null) ? Arrays.asList(triggerTypes.split(",")) : Collections.emptyList();
-
-    Predicate<Trigger> triggerPredicate =
-        trigger -> {
-          // trigger.getEnabled() may be null, so check that before comparing.  If
-          // trigger.getEnabled() is null, the trigger is disabled.
-          boolean triggerEnabled =
-              (trigger.getEnabled() != null) ? trigger.getEnabled().booleanValue() : false;
-          return ((enabledTriggers == null) || (triggerEnabled == enabledTriggers))
-              && ((triggerTypes == null) || triggerTypeList.contains(trigger.getType()));
-        };
-
-    Predicate<Pipeline> pipelinePredicate =
-        pipeline -> {
-          // pipeline.getDisabled may be null, so check that before comparing.  If
-          // pipeline.getDisabled is null, the pipeline is enabled.
-          boolean pipelineEnabled =
-              (pipeline.getDisabled() == null) || (pipeline.getDisabled() == false);
-
-          return ((enabledPipelines == null) || (pipelineEnabled == enabledPipelines))
-              && pipeline.getTriggers().stream().anyMatch(triggerPredicate);
-        };
-
-    List<Pipeline> retval =
-        pipelines.stream().filter(pipelinePredicate).collect(Collectors.toList());
-
-    log.debug("returning {} of {} total pipeline(s)", retval.size(), pipelines.size());
-
-    return retval;
-  }
-
-  /**
-   * Get all pipelines triggered after a pipeline executes.
-   *
-   * @param id the id of the completed/triggering pipeline
-   * @param status the execution status of the pipeline (canceled/suspended/succeeded)
-   */
-  @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
-  @PostFilter("#restricted ? hasPermission(filterObject.name, 'APPLICATION', 'READ') : true")
-  @RequestMapping(value = "triggeredBy/{id:.+}/{status}", method = RequestMethod.GET)
-  public Collection<Pipeline> getTriggeredPipelines(
-      @PathVariable String id,
-      @PathVariable String status,
-      @RequestParam(required = false, value = "restricted", defaultValue = "true")
-          boolean restricted,
       @RequestParam(required = false, value = "refresh", defaultValue = "true") boolean refresh) {
-
     Collection<Pipeline> pipelines = pipelineDAO.all(refresh);
-
-    Predicate<Trigger> triggerPredicate =
-        trigger -> {
-          boolean retval =
-              trigger.getEnabled()
-                  && (trigger.getType() != null)
-                  && trigger.getType().equals("pipeline")
-                  && id.equals(trigger.getPipeline())
-                  && trigger.getStatus().contains(status);
-          log.debug(
-              "pipeline configuration id {} with status {} {} trigger {}",
-              id,
-              status,
-              retval ? "matches" : "does not match",
-              trigger.toString());
-          return retval;
-        };
-
-    // Return all pipelines with at least one trigger defined for the given id
-    // and status.
-    Predicate<Pipeline> pipelinePredicate =
-        pipeline ->
-            !Boolean.TRUE.equals(pipeline.getDisabled())
-                && pipeline.getTriggers().stream().anyMatch(triggerPredicate);
-    return pipelines.stream().filter(pipelinePredicate).collect(Collectors.toList());
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    pipelines.removeIf(
+        p -> !fiatPermissionEvaluator.hasPermission(auth, p.getName(), "PIPELINE", "READ"));
+    return pipelines;
   }
 
   @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
@@ -203,16 +136,23 @@ public class PipelineController {
         });
 
     int i = 0;
+    List<Pipeline> toBeRemoved = new ArrayList<>();
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     for (Pipeline p : pipelines) {
-      p.setIndex(i);
-      i++;
+      if (fiatPermissionEvaluator.hasPermission(auth, p.getName(), "PIPELINE", "READ")) {
+        p.setIndex(i);
+        i++;
+      } else {
+        toBeRemoved.add(p);
+      }
     }
-
+    pipelines.removeAll(toBeRemoved);
     return pipelines;
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  @PostFilter("hasPermission(filterObject.application, 'APPLICATION', 'READ')")
+  @PostFilter(
+      "hasPermission(filterObject.application, 'APPLICATION', 'READ') and hasPermission(filterObject.name, 'PIPELINE', 'READ')")
   @RequestMapping(value = "{id:.+}/history", method = RequestMethod.GET)
   public Collection<Pipeline> getHistory(
       @PathVariable String id, @RequestParam(value = "limit", defaultValue = "20") int limit) {
@@ -220,20 +160,11 @@ public class PipelineController {
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
+  @PostAuthorize(
+      "hasPermission(returnObject.application, 'APPLICATION', 'READ') and hasPermission(returnObject.name, 'PIPELINE', 'READ')")
   @RequestMapping(value = "{id:.+}/get", method = RequestMethod.GET)
   public Pipeline get(@PathVariable String id) {
     return pipelineDAO.findById(id);
-  }
-
-  @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
-  @RequestMapping(value = "{application:.+}/name/{name:.+}", method = RequestMethod.GET)
-  public Pipeline getByApplicationAndName(
-      @PathVariable String application,
-      @PathVariable String name,
-      @RequestParam(required = false, value = "refresh", defaultValue = "true") boolean refresh) {
-    return pipelineDAO.getPipelineByName(application, name, refresh);
   }
 
   @PreAuthorize(
@@ -244,6 +175,7 @@ public class PipelineController {
       @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
           Boolean staleCheck) {
 
+    permissionCheck(pipeline);
     validatePipeline(pipeline, staleCheck);
 
     pipeline.setName(pipeline.getName().trim());
@@ -258,7 +190,33 @@ public class PipelineController {
       pipeline.setTriggers(triggers);
     }
 
-    return pipelineDAO.create(pipeline.getId(), pipeline);
+    Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    syncRoles();
+    String username = getUsername(auth);
+    if (username != null
+        && !username.isEmpty()
+        && fiatPermissionEvaluator.hasCachedPermission(username)) {
+      fiatPermissionEvaluator.invalidatePermission(username);
+    }
+    return pl;
+  }
+
+  private void permissionCheck(Pipeline pipeline) {
+    String id = pipeline.getId();
+    if (!Strings.isNullOrEmpty(id)) {
+      Pipeline existingPipeline = pipelineDAO.findById(id);
+      if (existingPipeline == null) {
+        return;
+      }
+      Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+      boolean hasPermission =
+          fiatPermissionEvaluator.hasPermission(auth, pipeline.getName(), "PIPELINE", "WRITE");
+      if (!hasPermission) {
+        throw new PipelineAccessDeniedException(
+            "You don't have enough permissions to edit this pipeline!!. Please contact system admin.");
+      }
+    }
   }
 
   @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
@@ -267,17 +225,22 @@ public class PipelineController {
     pipelineDAO.bulkImport(pipelines);
   }
 
-  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize(
+      "hasPermission(#application, 'APPLICATION', 'WRITE') and hasPermission(#pipeline, 'PIPELINE', 'WRITE')")
   @RequestMapping(value = "{application}/{pipeline:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable String application, @PathVariable String pipeline) {
     String pipelineId = pipelineDAO.getPipelineId(application, pipeline);
     log.info(
-        "Deleting pipeline \"{}\" with id {} in application {}", pipeline, pipelineId, application);
+        "*************************Deleting pipeline \"{}\" with id {} in application {}",
+        pipeline,
+        pipelineId,
+        application);
     pipelineDAO.delete(pipelineId);
 
     serviceAccountsService.ifPresent(
         accountsService ->
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(pipelineId)));
+    syncRoles();
   }
 
   public void delete(@PathVariable String id) {
@@ -287,7 +250,8 @@ public class PipelineController {
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(id)));
   }
 
-  @PreAuthorize("hasPermission(#pipeline.application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize(
+      "hasPermission(#pipeline.application, 'APPLICATION', 'WRITE') and hasPermission(#pipeline.name, 'PIPELINE', 'WRITE')")
   @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
   public Pipeline update(
       @PathVariable final String id,
@@ -299,7 +263,7 @@ public class PipelineController {
     if (!pipeline.getId().equals(existingPipeline.getId())) {
       throw new InvalidRequestException(
           format(
-              "The provided id %s doesn't match the existing pipeline id %s",
+              "The provided id %s doesn't match the pipeline id %s",
               pipeline.getId(), existingPipeline.getId()));
     }
 
@@ -310,7 +274,7 @@ public class PipelineController {
     pipeline = ensureCronTriggersHaveIdentifier(pipeline);
 
     pipelineDAO.update(id, pipeline);
-
+    syncRoles();
     return pipeline;
   }
 
@@ -432,5 +396,32 @@ public class PipelineController {
     pipeline.setTriggers(triggers);
 
     return pipeline;
+  }
+
+  private void syncRoles() {
+    if (fiatStatus.isEnabled()
+        && fiatConfigurationProperties.getRoleSync().isEnabled()
+        && fiatService.isPresent()) {
+      try {
+        fiatService.get().sync();
+      } catch (Exception e) {
+        log.warn("failed to trigger fiat permission sync", e);
+      }
+    }
+  }
+
+  private String getUsername(Authentication authentication) {
+    String username = "anonymous";
+    if (authentication != null
+        && authentication.isAuthenticated()
+        && authentication.getPrincipal() != null) {
+      Object principal = authentication.getPrincipal();
+      if (principal instanceof UserDetails) {
+        username = ((UserDetails) principal).getUsername();
+      } else if (StringUtils.isNotEmpty(principal.toString())) {
+        username = principal.toString();
+      }
+    }
+    return username;
   }
 }
