@@ -3,9 +3,11 @@ apply from: "${project.rootDir}/gradle/kotlin.gradle"
 dependencies {
   implementation(project(":front50-web"))
   implementation("com.h2database:h2")
+  implementation ("net.logstash.logback:logstash-logback-encoder:4.11")
+  implementation("org.apache.groovy:groovy:4.0.9")
 
   api("org.springframework.boot:spring-boot-starter-test")
-  api("dev.minutest:minutest")
+  api("dev.minutest:minutest:1.13.0")
 
   testImplementation(project(":front50-core"))
   testImplementation(project(":front50-sql"))

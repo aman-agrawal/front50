@@ -18,10 +18,21 @@ plugins {
   id 'io.spinnaker.project' version "$spinnakerGradleVersion" apply false
   id "org.jetbrains.kotlin.jvm" version "$kotlinVersion" apply false
   id "org.jetbrains.kotlin.plugin.allopen" version "$kotlinVersion" apply false
+  id 'org.springframework.boot' version '3.0.0' apply true
 }
 
 allprojects {
   apply plugin: 'io.spinnaker.project'
+  //apply plugin: 'io.spinnaker.kork'
+
+  repositories {
+    mavenLocal()
+    mavenCentral()
+    gradlePluginPortal()
+  }
+  tasks.withType( Copy).all {
+    duplicatesStrategy 'exclude'
+  }
 }
 
 subprojects { project ->
@@ -30,6 +41,8 @@ subprojects { project ->
   if ([korkVersion, fiatVersion].find { it.endsWith("-SNAPSHOT") }) {
     repositories {
       mavenLocal()
+      mavenCentral()
+      gradlePluginPortal()
     }
   }
 
@@ -43,7 +56,6 @@ subprojects { project ->
       testLogging {
         exceptionFormat = 'full'
       }
-      useJUnitPlatform()
     }
 
     tasks.withType(JavaExec) {
@@ -58,20 +70,24 @@ subprojects { project ->
       annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
       testAnnotationProcessor(platform("io.spinnaker.kork:kork-bom:$korkVersion"))
 
-      implementation("net.logstash.logback:logstash-logback-encoder")
+      implementation("net.logstash.logback:logstash-logback-encoder:4.11")
 
       compileOnly("org.projectlombok:lombok")
       annotationProcessor("org.projectlombok:lombok")
       testAnnotationProcessor("org.projectlombok:lombok")
-
-      testImplementation("org.codehaus.groovy:groovy")
+      implementation "com.amazonaws:aws-java-sdk-bom:1.12.411"
+      implementation "com.amazonaws:aws-java-sdk-sns:1.12.411"
+      implementation "com.amazonaws:aws-java-sdk-sqs:1.12.411"
+      //testImplementation("org.codehaus.groovy:groovy-all:3.0.16")
+      implementation "org.apache.groovy:groovy:4.0.9"
       testImplementation("org.spockframework:spock-core")
       testImplementation("org.springframework.boot:spring-boot-starter-test")
+      api("org.spockframework:spock-bom:2.4-M1-groovy-4.0")
+      testImplementation("org.spockframework:spock-bom:2.4-M1-groovy-4.0")
       testImplementation("org.spockframework:spock-spring")
       testImplementation("org.springframework:spring-test")
       testImplementation("org.hamcrest:hamcrest-core")
-      testRuntimeOnly("cglib:cglib-nodep")
-      testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+      testRuntimeOnly("cglib:cglib-nodep:3.3.0")
       testRuntimeOnly("org.objenesis:objenesis")
     }
     // Keep this constraint till all other components get bumped up to this version and subsequently updated in the kork.

@@ -17,6 +17,7 @@
 
 package com.netflix.spinnaker.front50.utils
 
+
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.S3ObjectSummary
 
@@ -38,12 +39,13 @@ class S3TestHelper {
         }
       }
       amazonS3.deleteBucket(bucketName)
-    } catch (ignored) {}
+    } catch (ignored) {
+    }
 
     amazonS3.createBucket(bucketName)
   }
-
-  /**
+}
+/**
    * s3proxy: https://github.com/andrewgaul/s3proxy
    *
    * Configuration
@@ -56,7 +58,8 @@ class S3TestHelper {
    * jclouds.filesystem.basedir=/tmp/s3proxy
    *
    * $ ./s3proxy --properties s3proxy.properties
-   */
+   *//*
+
   static boolean s3ProxyUnavailable() {
     Socket s
     try {
@@ -76,3 +79,4 @@ class S3TestHelper {
     }
   }
 }
+*/

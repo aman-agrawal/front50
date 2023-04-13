@@ -26,6 +26,7 @@ dependencies {
   implementation project(":front50-api")
   implementation project(":front50-core")
   implementation project(":front50-migrations")
+  api("org.apache.groovy:groovy:4.0.9")
   implementation "org.springframework.boot:spring-boot-starter-web"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
   implementation "io.spinnaker.fiat:fiat-api:$fiatVersion"
@@ -34,10 +35,18 @@ dependencies {
   implementation "io.spinnaker.kork:kork-config"
   implementation "io.spinnaker.kork:kork-web"
   implementation "io.spinnaker.kork:kork-exceptions"
-  implementation "com.squareup.retrofit:converter-jackson"
-  implementation "io.swagger:swagger-annotations"
+  implementation "com.squareup.retrofit:converter-jackson:1.9.0"
+  implementation "io.swagger:swagger-annotations:1.5.20"
   implementation "commons-codec:commons-codec"
-  implementation "javax.validation:validation-api"
+  implementation "javax.validation:validation-api:1.1.0.Final"
+  implementation "net.logstash.logback:logstash-logback-encoder:4.11"
+  implementation "com.amazonaws:aws-java-sdk-bom:1.12.411"
+  implementation "com.amazonaws:aws-java-sdk-sns:1.12.411"
+  implementation "com.amazonaws:aws-java-sdk-sqs:1.12.411"
+  testImplementation "org.apache.groovy:groovy:4.0.9"
+  implementation("org.apache.groovy:groovy-json:4.0.9")
+  implementation("org.apache.groovy:groovy-xml:4.0.9")
+
 
   runtimeOnly "io.spinnaker.kork:kork-runtime"
 
@@ -45,15 +54,22 @@ dependencies {
   testImplementation project(":front50-test")
   testImplementation project(":front50-sql")
   testImplementation "io.spinnaker.kork:kork-sql-test"
-  testImplementation "io.reactivex:rxjava"
-  testImplementation "org.codehaus.groovy:groovy-json"
+  testImplementation "io.reactivex:rxjava:1.3.8"
 
   // Add each included cloud provider project as a runtime dependency
   gradle.includedProviderProjects.each {
     runtimeOnly project(it)
   }
 }
-
+tasks.withType( Copy).all {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+tasks.withType(Tar){
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+tasks.withType(Zip){
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
 test {
   environment "AWS_ACCESS_KEY_ID", "null"
   environment "AWS_SECRET_KEY", "null"

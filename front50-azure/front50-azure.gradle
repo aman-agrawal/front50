@@ -20,6 +20,11 @@ dependencies {
   implementation 'com.microsoft.azure:azure:1.0.0-beta3'
   implementation 'com.microsoft.azure:azure-storage:4.4.0'
   implementation 'com.microsoft.azure:azure-mgmt-storage:1.0.0-beta3'
+  implementation "net.logstash.logback:logstash-logback-encoder:4.11"
+  api("org.apache.groovy:groovy:4.0.9")
+  implementation "org.apache.groovy:groovy:4.0.9"
+  api("org.spockframework:spock-bom:2.4-M1-groovy-4.0")
+  testImplementation("org.spockframework:spock-bom:2.4-M1-groovy-4.0")
 
   implementation "org.springframework.boot:spring-boot-starter-web"
   implementation "org.springframework.boot:spring-boot-starter-actuator"

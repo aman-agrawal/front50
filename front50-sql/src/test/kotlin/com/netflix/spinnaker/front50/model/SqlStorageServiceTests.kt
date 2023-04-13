@@ -392,7 +392,7 @@ internal object SqlStorageServiceTests : JUnit5Minutests {
     }
 
     afterAll {
-      jooq.close()
+     //jooq.close()
     }
 
   }
@@ -423,3 +423,4 @@ internal object SqlStorageServiceTests : JUnit5Minutests {
     }
   }
 }
+

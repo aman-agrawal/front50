@@ -16,6 +16,7 @@
 
 package com.netflix.spinnaker.front50.model
 
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.config.Front50SqlProperties
@@ -531,3 +532,4 @@ class SqlStorageService(
     return front50SqlProperties.healthIntervalMillis
   }
 }
+

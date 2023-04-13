@@ -27,6 +27,8 @@ dependencies {
   implementation "com.amazonaws:aws-java-sdk-s3"
   implementation "com.amazonaws:aws-java-sdk-sts"
   implementation "com.netflix.eureka:eureka-client"
+  implementation "net.logstash.logback:logstash-logback-encoder:4.11"
+  testImplementation "org.apache.groovy:groovy:4.0.9"
 
   testImplementation project(":front50-test")
 }

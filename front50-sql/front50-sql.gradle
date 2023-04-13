@@ -11,14 +11,19 @@ dependencies {
   implementation "io.spinnaker.kork:kork-sql"
   implementation "io.spinnaker.kork:kork-exceptions"
   implementation "io.spinnaker.kork:kork-web"
+  implementation "net.logstash.logback:logstash-logback-encoder:4.11"
+  api("org.jooq:jooq:3.13.6")
+  api("org.jooq:jooq-kotlin:3.13.6")
+
 
   implementation "io.strikt:strikt-core"
   implementation "io.github.resilience4j:resilience4j-retry"
 
   implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core"
 
-  testImplementation "io.mockk:mockk"
-  testImplementation "dev.minutest:minutest"
+  testImplementation "io.mockk:mockk:1.10.5"
+  testImplementation "org.apache.groovy:groovy:4.0.9"
+  testImplementation "dev.minutest:minutest:1.13.0"
   testImplementation "org.junit.jupiter:junit-jupiter-api"
 
   testImplementation "mysql:mysql-connector-java"
