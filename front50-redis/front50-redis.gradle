@@ -23,17 +23,18 @@ dependencies {
   implementation project(":front50-api")
   implementation "io.spinnaker.kork:kork-exceptions"
 
-  implementation("org.codehaus.groovy:groovy")
-
   implementation "org.springframework.boot:spring-boot-starter-web"
   implementation "org.springframework.boot:spring-boot-starter-actuator"
   implementation "org.springframework.boot:spring-boot-autoconfigure"
   implementation 'org.springframework.data:spring-data-redis'
   implementation 'redis.clients:jedis'
   implementation "com.github.ben-manes.caffeine:guava"
+  implementation "net.logstash.logback:logstash-logback-encoder:4.11"
 
   testImplementation project(":front50-test")
   testImplementation "io.spinnaker.kork:kork-jedis-test"
+  testImplementation "org.apache.groovy:groovy-all:4.0.9"
+
 }
 
 tasks.compileGroovy.enabled = true
