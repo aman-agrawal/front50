@@ -68,10 +68,16 @@ subprojects { project ->
     }
 
     dependencies {
-      implementation(enforcedPlatform("io.spinnaker.kork:kork-bom:$korkVersion"))
-      annotationProcessor(platform("io.spinnaker.kork:kork-bom:$korkVersion"))
+      implementation(enforcedPlatform("io.spinnaker.kork:kork-bom:$korkVersion")){
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+      }
+      annotationProcessor(platform("io.spinnaker.kork:kork-bom:$korkVersion")){
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+      }
       annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
-      testAnnotationProcessor(platform("io.spinnaker.kork:kork-bom:$korkVersion"))
+      testAnnotationProcessor(platform("io.spinnaker.kork:kork-bom:$korkVersion")){
+        exclude group: 'com.squareup.okhttp3', module: 'okhttp'
+      }
 
       implementation("net.logstash.logback:logstash-logback-encoder:4.11")
 
