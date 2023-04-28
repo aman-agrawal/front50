@@ -25,6 +25,4 @@ swagger:
     - /pipelines.*
     - /strategies.*
     - /v2/.*
-#logging:
-#  level:
-#    root: DEBUG
+    
