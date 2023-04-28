@@ -17,6 +17,7 @@
 
 package com.netflix.spinnnaker.front50.model
 
+
 import com.netflix.spinnaker.front50.api.model.pipeline.Pipeline;
 import com.netflix.spinnaker.front50.config.GcsConfig
 import com.netflix.spinnaker.front50.model.GcsIntegrationTestConfiguration
@@ -25,7 +26,7 @@ import com.netflix.spinnaker.front50.model.ObjectType
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.ConfigFileApplicationContextInitializer
+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit.jupiter.SpringExtension
@@ -36,7 +37,7 @@ import strikt.assertions.isEmpty
 @ExtendWith(SpringExtension::class)
 @ContextConfiguration(
   classes = [GcsConfig::class, GcsIntegrationTestConfiguration::class],
-  initializers = [ConfigFileApplicationContextInitializer::class]
+  initializers = [ConfigDataApplicationContextInitializer::class]
 )
 @TestPropertySource(properties = ["spring.config.location=classpath:minimal-gcs-account.yml"])
 class GcsIntegrationTest {
@@ -47,3 +48,4 @@ class GcsIntegrationTest {
     expectThat(storageService.listObjectKeys(ObjectType.PIPELINE)).hasSize(1)
   }
 }
+

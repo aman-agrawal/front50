@@ -2,7 +2,6 @@ package com.netflix.spinnaker.front50.config;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
@@ -34,10 +33,7 @@ import org.springframework.context.annotation.Import;
 @Import(BastionConfig.class)
 @EnableConfigurationProperties({S3MetadataStorageProperties.class, S3PluginStorageProperties.class})
 public class S3Config {
-  @Bean
-  public AWSCredentialsProvider getAwsCredProvider() {
-    return new DefaultAWSCredentialsProviderChain();
-  }
+
   @Bean
   @ConditionalOnProperty(value = "spinnaker.s3.storage-service.enabled", matchIfMissing = true)
   public AmazonS3 awsS3MetadataClient(

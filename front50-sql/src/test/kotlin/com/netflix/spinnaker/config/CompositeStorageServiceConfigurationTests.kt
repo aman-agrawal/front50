@@ -16,6 +16,8 @@
 
 package com.netflix.spinnaker.config
 
+import com.netflix.spectator.api.DefaultRegistry
+import com.netflix.spectator.api.Registry
 import com.netflix.spinnaker.front50.config.CommonStorageServiceDAOConfig
 import com.netflix.spinnaker.front50.config.StorageServiceConfigurationProperties
 import com.netflix.spinnaker.front50.migrations.StorageServiceMigrator
@@ -65,10 +67,15 @@ internal class CompositeStorageServiceConfigurationTests {
 }
 
 @SpringBootApplication
-@Import(CommonStorageServiceDAOConfig::class, CompositeStorageServiceConfiguration::class, SqlConfiguration::class)
+@Import(CommonStorageServiceDAOConfig::class, CompositeStorageServiceConfiguration::class, SqlConfiguration::class, PluginsAutoConfiguration::class)
 @EnableConfigurationProperties(StorageServiceConfigurationProperties::class)
 internal class CompositeStorageServiceConfigurationTestApp {
   @Bean
   @ConditionalOnMissingBean
   fun contextProvider(): RequestContextProvider = AuthenticatedRequestContextProvider()
+
+  @Bean
+  @ConditionalOnMissingBean
+  fun getRegistry(): Registry = DefaultRegistry()
+
 }
