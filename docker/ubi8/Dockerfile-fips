@@ -36,7 +36,7 @@ RUN adduser spinnaker
 RUN mkdir -p /opt/front50/plugins 
 RUN chmod -R 777 /opt/front50/plugins/
 RUN chown -R spinnaker:spinnaker /opt/
-RUN yum -y remove  tar  vim curl
+#RUN yum -y remove  tar  vim curl
 RUN yum -y remove clean all && rm -rf /var/cache
 USER spinnaker
 CMD ["/opt/front50/bin/front50"]
