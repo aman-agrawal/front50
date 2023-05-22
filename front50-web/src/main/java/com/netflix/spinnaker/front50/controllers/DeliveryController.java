@@ -8,9 +8,7 @@ import io.swagger.annotations.ApiOperation;
 import java.util.Collection;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,28 +29,28 @@ public class DeliveryController {
     return deliveryRepository.getAllConfigs();
   }
 
-  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
+  // @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
   @ApiOperation(value = "", notes = "Get the delivery configs for an application")
   @RequestMapping(method = RequestMethod.GET, value = "/applications/{application}/deliveries")
   Collection<Delivery> getConfigByAppName(@PathVariable String application) {
     return deliveryRepository.getConfigsByApplication(application);
   }
 
-  @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
+  // @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
   @ApiOperation(value = "", notes = "Get a delivery config by id")
   @RequestMapping(method = RequestMethod.GET, value = "deliveries/{id}")
   Delivery getConfigById(@PathVariable String id) {
     return deliveryRepository.findById(id);
   }
 
-  @PreAuthorize("hasPermission(#config.application, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#config.application, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Create a delivery config")
   @RequestMapping(method = RequestMethod.POST, value = "/deliveries")
   Delivery createConfig(@RequestBody Delivery config) {
     return deliveryRepository.upsertConfig(config);
   }
 
-  @PreAuthorize("hasPermission(#config.application, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#config.application, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Update a delivery config")
   @RequestMapping(method = RequestMethod.PUT, value = "/deliveries/{id}")
   Delivery upsertConfig(@PathVariable String id, @RequestBody Delivery config) {
@@ -70,7 +68,7 @@ public class DeliveryController {
     return deliveryRepository.upsertConfig(config);
   }
 
-  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Delete a delivery config")
   @RequestMapping(
       method = RequestMethod.DELETE,
