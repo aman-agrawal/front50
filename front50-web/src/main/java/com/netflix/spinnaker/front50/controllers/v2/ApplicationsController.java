@@ -23,9 +23,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -60,7 +58,7 @@ public class ApplicationsController {
     this.applicationService = applicationService;
   }
 
-  @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
+  // @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
   @PostFilter("#restricted ? hasPermission(filterObject.name, 'APPLICATION', 'READ') : true")
   @ApiOperation(
       value = "",
@@ -112,7 +110,7 @@ public class ApplicationsController {
     return results;
   }
 
-  @PreAuthorize("@fiatPermissionEvaluator.canCreate('APPLICATION', #app)")
+  // @PreAuthorize("@fiatPermissionEvaluator.canCreate('APPLICATION', #app)")
   @ApiOperation(value = "", notes = "Create an application")
   @RequestMapping(method = RequestMethod.POST)
   public Application create(@RequestBody final Application app) {
@@ -134,7 +132,7 @@ public class ApplicationsController {
     return createdApplication;
   }
 
-  @PreAuthorize("hasPermission(#applicationName, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#applicationName, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Delete an application")
   @RequestMapping(method = RequestMethod.DELETE, value = "/{applicationName:.+}")
   public void delete(@PathVariable String applicationName, HttpServletResponse response) {
@@ -142,7 +140,7 @@ public class ApplicationsController {
     response.setStatus(HttpStatus.NO_CONTENT.value());
   }
 
-  @PreAuthorize("hasPermission(#app.name, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#app.name, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Update an existing application by merging the attributes")
   @RequestMapping(method = RequestMethod.PATCH, value = "/{applicationName:.+}")
   public Application update(
@@ -157,7 +155,7 @@ public class ApplicationsController {
     return applicationService.save(app);
   }
 
-  @PreAuthorize("hasPermission(#app.name, 'APPLICATION', 'WRITE')")
+  // @PreAuthorize("hasPermission(#app.name, 'APPLICATION', 'WRITE')")
   @ApiOperation(value = "", notes = "Update an existing application by replacing all attributes")
   @RequestMapping(method = RequestMethod.PUT, value = "/{applicationName:.+}")
   public Application replace(
@@ -172,7 +170,7 @@ public class ApplicationsController {
     return applicationService.replace(app);
   }
 
-  @PostAuthorize("hasPermission(#applicationName, 'APPLICATION', 'READ')")
+  // @PostAuthorize("hasPermission(#applicationName, 'APPLICATION', 'READ')")
   @ApiOperation(value = "", notes = "Fetch a single application by name")
   @RequestMapping(method = RequestMethod.GET, value = "/{applicationName:.+}")
   public Application get(@PathVariable final String applicationName) {
@@ -193,7 +191,7 @@ public class ApplicationsController {
     return app;
   }
 
-  @PreAuthorize("hasPermission(#applicationName, 'APPLICATION', 'READ')")
+  // @PreAuthorize("hasPermission(#applicationName, 'APPLICATION', 'READ')")
   @RequestMapping(value = "{applicationName:.+}/history", method = RequestMethod.GET)
   public Collection<Application> getHistory(
       @PathVariable String applicationName,
@@ -201,7 +199,7 @@ public class ApplicationsController {
     return applicationDAO.history(applicationName, limit);
   }
 
-  @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
+  // @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
   @RequestMapping(method = RequestMethod.POST, value = "/batch/applications")
   public void batchUpdate(@RequestBody final Collection<Application> applications) {
     applicationDAO.bulkImport(applications);
