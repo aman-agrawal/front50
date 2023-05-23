@@ -16,7 +16,6 @@
  */
 package com.netflix.spinnaker.front50.config;
 
-import com.netflix.spectator.api.DefaultRegistry;
 import com.netflix.spectator.api.Registry;
 import com.netflix.spinnaker.config.PluginsAutoConfiguration;
 import com.netflix.spinnaker.fiat.shared.EnableFiatAutoConfig;
@@ -39,6 +38,7 @@ import com.netflix.spinnaker.kork.web.context.AuthenticatedRequestContextProvide
 import com.netflix.spinnaker.kork.web.context.RequestContextProvider;
 import com.netflix.spinnaker.kork.web.interceptors.MetricsInterceptor;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -60,10 +60,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Import({PluginsAutoConfiguration.class})
 @EnableConfigurationProperties(StorageServiceConfigurationProperties.class)
 public class Front50WebConfig implements WebMvcConfigurer {
-  @Bean
-  public Registry getRegistry() {
-    return new DefaultRegistry();
-  }
+
+  @Autowired private Registry registry;
 
   @Bean
   public TaskScheduler taskScheduler() {
@@ -78,7 +76,7 @@ public class Front50WebConfig implements WebMvcConfigurer {
   public void addInterceptors(InterceptorRegistry registry) {
     registry.addInterceptor(
         new MetricsInterceptor(
-            getRegistry(),
+            this.registry,
             "controller.invocations",
             new ArrayList<>(Arrays.asList("account", "application")),
             new ArrayList<>(Collections.singletonList("BasicErrorController"))));
