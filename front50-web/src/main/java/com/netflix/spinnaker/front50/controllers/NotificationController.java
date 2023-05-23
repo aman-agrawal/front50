@@ -13,6 +13,8 @@ import java.util.Collection;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /** Controller for presets */
@@ -43,7 +45,7 @@ public class NotificationController {
     notificationDAO.saveGlobal(notification);
   }
 
-  // @PostAuthorize("hasPermission(#name, 'APPLICATION', 'READ')")
+  @PostAuthorize("hasPermission(#name, 'APPLICATION', 'READ')")
   @RequestMapping(value = "{type}/{name}", method = RequestMethod.GET)
   public Notification listByApplication(
       @PathVariable(value = "type") String type, @PathVariable(value = "name") String name) {
@@ -82,8 +84,8 @@ public class NotificationController {
         });
   }
 
-  /*@PreAuthorize(
-  "@fiatPermissionEvaluator.storeWholePermission() and hasPermission(#name, 'APPLICATION', 'WRITE')")*/
+  @PreAuthorize(
+      "@fiatPermissionEvaluator.storeWholePermission() and hasPermission(#name, 'APPLICATION', 'WRITE')")
   @RequestMapping(value = "{type}/{name}", method = RequestMethod.POST)
   public void save(
       @PathVariable(value = "type") String type,
@@ -94,8 +96,8 @@ public class NotificationController {
     }
   }
 
-  /*@PreAuthorize(
-  "@fiatPermissionEvaluator.storeWholePermission() and hasPermission(#name, 'APPLICATION', 'WRITE')")*/
+  @PreAuthorize(
+      "@fiatPermissionEvaluator.storeWholePermission() and hasPermission(#name, 'APPLICATION', 'WRITE')")
   @RequestMapping(value = "{type}/{name}", method = RequestMethod.DELETE)
   public void delete(
       @PathVariable(value = "type") String type, @PathVariable(value = "name") String name) {

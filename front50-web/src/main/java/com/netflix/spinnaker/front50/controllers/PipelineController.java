@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -82,7 +83,7 @@ public class PipelineController {
     this.pipelineTemplateDAO = pipelineTemplateDAO;
   }
 
-  // @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
+  @PreAuthorize("#restricted ? @fiatPermissionEvaluator.storeWholePermission() : true")
   @PostFilter("#restricted ? hasPermission(filterObject.name, 'APPLICATION', 'READ') : true")
   @RequestMapping(value = "", method = RequestMethod.GET)
   public Collection<Pipeline> list(
@@ -175,7 +176,7 @@ public class PipelineController {
     return pipelines.stream().filter(pipelinePredicate).collect(Collectors.toList());
   }
 
-  // @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
+  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'READ')")
   @RequestMapping(value = "{application:.+}", method = RequestMethod.GET)
   public List<Pipeline> listByApplication(
       @PathVariable(value = "application") String application,
@@ -210,7 +211,7 @@ public class PipelineController {
     return pipelines;
   }
 
-  // @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
+  @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
   @PostFilter("hasPermission(filterObject.application, 'APPLICATION', 'READ')")
   @RequestMapping(value = "{id:.+}/history", method = RequestMethod.GET)
   public Collection<Pipeline> getHistory(
@@ -218,8 +219,8 @@ public class PipelineController {
     return pipelineDAO.history(id, limit);
   }
 
-  // @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
-  // @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
+  @PreAuthorize("@fiatPermissionEvaluator.storeWholePermission()")
+  @PostAuthorize("hasPermission(returnObject.application, 'APPLICATION', 'READ')")
   @RequestMapping(value = "{id:.+}/get", method = RequestMethod.GET)
   public Pipeline get(@PathVariable String id) {
     return pipelineDAO.findById(id);
@@ -260,13 +261,13 @@ public class PipelineController {
     return pipelineDAO.create(pipeline.getId(), pipeline);
   }
 
-  // @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
+  @PreAuthorize("@fiatPermissionEvaluator.isAdmin()")
   @RequestMapping(value = "batchUpdate", method = RequestMethod.POST)
   public void batchUpdate(@RequestBody List<Pipeline> pipelines) {
     pipelineDAO.bulkImport(pipelines);
   }
 
-  // @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize("hasPermission(#application, 'APPLICATION', 'WRITE')")
   @RequestMapping(value = "{application}/{pipeline:.+}", method = RequestMethod.DELETE)
   public void delete(@PathVariable String application, @PathVariable String pipeline) {
     String pipelineId = pipelineDAO.getPipelineId(application, pipeline);
@@ -286,7 +287,7 @@ public class PipelineController {
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(id)));
   }
 
-  // @PreAuthorize("hasPermission(#pipeline.application, 'APPLICATION', 'WRITE')")
+  @PreAuthorize("hasPermission(#pipeline.application, 'APPLICATION', 'WRITE')")
   @RequestMapping(value = "/{id}", method = RequestMethod.PUT)
   public Pipeline update(
       @PathVariable final String id,
