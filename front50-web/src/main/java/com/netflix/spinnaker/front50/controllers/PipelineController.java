@@ -53,6 +53,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PostFilter;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -77,6 +78,9 @@ public class PipelineController {
   private final Optional<FiatService> fiatService;
   private final FiatConfigurationProperties fiatConfigurationProperties;
   private final FiatStatus fiatStatus;
+
+  @Value("${pipeline.rbac:false}")
+  private boolean isPipelineRbac;
 
   public PipelineController(
       PipelineDAO pipelineDAO,
@@ -175,7 +179,9 @@ public class PipelineController {
       @RequestBody Pipeline pipeline,
       @RequestParam(value = "staleCheck", required = false, defaultValue = "false")
           Boolean staleCheck) {
-    if (staleCheck.equals(true)) {
+    log.debug("Pipeline RBAC Config : {}", isPipelineRbac);
+    log.debug("Pipeline staleCheck Config : {}", staleCheck);
+    if (isPipelineRbac && staleCheck.equals(true)) {
       permissionCheck(pipeline);
     }
     validatePipeline(pipeline, staleCheck);
@@ -192,17 +198,18 @@ public class PipelineController {
     }
 
     Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
+    if (isPipelineRbac) {
+      log.debug("Pipeline permission sync");
+      syncRoles();
+      Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+      String username = getUsername(auth);
 
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-    syncRoles();
-
-    String username = getUsername(auth);
-    log.info("******user name :{}", username);
-    if (username != null
-        && !username.isEmpty()
-        && fiatPermissionEvaluator.hasCachedPermission(username)) {
-      fiatPermissionEvaluator.invalidatePermission(username);
+      if (username != null
+          && !username.isEmpty()
+          && fiatPermissionEvaluator.hasCachedPermission(username)) {
+        log.debug("Clearing cached permissions for user: {}", username);
+        fiatPermissionEvaluator.invalidatePermission(username);
+      }
     }
     return pl;
   }
