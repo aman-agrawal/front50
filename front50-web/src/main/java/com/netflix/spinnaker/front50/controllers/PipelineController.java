@@ -199,8 +199,9 @@ public class PipelineController {
 
     Pipeline pl = pipelineDAO.create(pipeline.getId(), pipeline);
     if (isPipelineRbac) {
-      log.debug("Pipeline permission sync");
+      log.info("Pipeline permission sync started after saving the pipeline");
       syncRoles();
+      log.info("Pipeline permission sync ended after saving the pipeline");
       Authentication auth = SecurityContextHolder.getContext().getAuthentication();
       String username = getUsername(auth);
 
@@ -210,6 +211,8 @@ public class PipelineController {
         log.debug("Clearing cached permissions for user: {}", username);
         fiatPermissionEvaluator.invalidatePermission(username);
       }
+    } else {
+      log.info("Since pipeline rbac is disabled not calling role sync.");
     }
     return pl;
   }
@@ -248,7 +251,13 @@ public class PipelineController {
     serviceAccountsService.ifPresent(
         accountsService ->
             accountsService.deleteManagedServiceAccounts(Collections.singletonList(pipelineId)));
-    syncRoles();
+    if (isPipelineRbac) {
+      log.info("Pipeline permission sync started after deleting pipeline");
+      syncRoles();
+      log.info("Pipeline permission sync ended after deleting pipeline");
+    } else {
+      log.info("Since pipeline rbac is disabled not calling role sync.");
+    }
   }
 
   public void delete(@PathVariable String id) {
@@ -282,7 +291,13 @@ public class PipelineController {
     pipeline = ensureCronTriggersHaveIdentifier(pipeline);
 
     pipelineDAO.update(id, pipeline);
-    syncRoles();
+    if (isPipelineRbac) {
+      log.info("Pipeline permission sync started after updating pipeline");
+      syncRoles();
+      log.info("Pipeline permission sync ended after updating pipeline");
+    } else {
+      log.info("Since pipeline rbac is disabled not calling role sync.");
+    }
     return pipeline;
   }
 
