@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import retrofit.RetrofitError;
 
 /** Wraps the business logic around Application Permissions. */
 @Component
@@ -182,8 +183,14 @@ public class ApplicationPermissionsService {
 
     if (fiatConfigurationProperties.getRoleSync().isEnabled()) {
       try {
-        fiatService.get().sync(new ArrayList<>(roles));
-      } catch (SpinnakerServerException e) {
+        log.info("Start of the role sync with roles:{}", roles);
+        if (roles.isEmpty()) {
+          fiatService.get().syncOnlyUnrestrictedUser();
+        } else {
+          fiatService.get().sync(new ArrayList<>(roles));
+        }
+        log.info("End of the role sync with roles");
+      } catch (RetrofitError e) {
         log.warn("Error syncing users", e);
       }
     }
