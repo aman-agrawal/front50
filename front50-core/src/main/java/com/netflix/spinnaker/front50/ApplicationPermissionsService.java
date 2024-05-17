@@ -25,7 +25,6 @@ import com.netflix.spinnaker.front50.model.application.Application.Permission;
 import com.netflix.spinnaker.front50.model.application.ApplicationDAO;
 import com.netflix.spinnaker.front50.model.application.ApplicationPermissionDAO;
 import com.netflix.spinnaker.kork.exceptions.SystemException;
-import com.netflix.spinnaker.kork.retrofit.exceptions.SpinnakerServerException;
 import com.netflix.spinnaker.kork.web.exceptions.NotFoundException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
