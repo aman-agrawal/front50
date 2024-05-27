@@ -1,19 +1,22 @@
 package com.netflix.spinnaker.front50.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.netflix.spinnaker.fiat.shared.FiatPermissionEvaluator
+import com.netflix.spinnaker.fiat.shared.FiatService
+import com.netflix.spinnaker.fiat.shared.FiatStatus
 import com.netflix.spinnaker.front50.api.model.pipeline.Pipeline
 import com.netflix.spinnaker.front50.api.validator.PipelineValidator
 import com.netflix.spinnaker.front50.api.validator.ValidatorErrors
+import com.netflix.spinnaker.front50.config.FiatConfigurationProperties
 import com.netflix.spinnaker.front50.model.pipeline.PipelineDAO
 import com.netflix.spinnaker.kork.web.exceptions.ExceptionMessageDecorator
 import com.netflix.spinnaker.kork.web.exceptions.GenericExceptionHandlers
 import com.netflix.spinnaker.kork.web.exceptions.NotFoundException
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.context.ContextConfiguration
@@ -21,9 +24,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import spock.lang.Specification
 import spock.lang.Unroll
-import spock.mock.DetachedMockFactory
 
-import jakarta.servlet.http.HttpServletResponse
 import java.util.concurrent.Executors
 import java.util.stream.Collectors
 
@@ -32,11 +33,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 @AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(controllers = [PipelineController])
-@ContextConfiguration(classes = [TestConfiguration, PipelineController])
+@ContextConfiguration(classes = [com.netflix.spinnaker.front50.TestConfiguration, PipelineController])
 class PipelineControllerSpec extends Specification {
 
   @Autowired
   private MockMvc mockMvc
+
+  FiatService fiatService = Mock(FiatService)
+  FiatStatus fiatStatus = Mock(FiatStatus)
+  FiatConfigurationProperties fiatConfigurationProperties = Mock(FiatConfigurationProperties) {
+    getRoleSync() >> Mock(FiatConfigurationProperties.RoleSyncConfigurationProperties) {
+      isEnabled() >> true
+    }
+  }
+  FiatPermissionEvaluator fiatPermissionEvaluator = Mock(FiatPermissionEvaluator)
 
   @Unroll
   def "should fail to save if application is missing, empty or blank"() {
@@ -113,7 +123,7 @@ class PipelineControllerSpec extends Specification {
           new ObjectMapper(),
           Optional.empty(),
           [new MockValidator()] as List<PipelineValidator>,
-          Optional.empty(), fiatPermissionEvaluator, fiatService, fiatConfigurationProperties, fiatStatus
+          Optional.empty(), fiatPermissionEvaluator, Optional.of(fiatService), fiatConfigurationProperties, fiatStatus
         )
       )
       .setControllerAdvice(
@@ -155,7 +165,8 @@ class PipelineControllerSpec extends Specification {
     pipelineDAO.history(testPipelineId, 20) >> pipelineList
 
     def mockMvcWithController = MockMvcBuilders.standaloneSetup(new PipelineController(
-      pipelineDAO, new ObjectMapper(), Optional.empty(), [], Optional.empty()
+      pipelineDAO, new ObjectMapper(), Optional.empty(), [], Optional.empty(), fiatPermissionEvaluator,
+      Optional.of(fiatService), fiatConfigurationProperties, fiatStatus
     )).build()
 
     when:
@@ -173,14 +184,37 @@ class PipelineControllerSpec extends Specification {
     response.contentAsString.contains("\"updateTs\":\"1662644108709\"")
   }
 
-  @Configuration
-  private static class TestConfiguration {
-    DetachedMockFactory detachedMockFactory = new DetachedMockFactory()
+  @Unroll
+  def "should create pipelines in a thread safe way"() {
+    given:
+    def pipelineDAO = new InMemoryPipelineDAO()
+    def createPipelineFirstRequest = post("/pipelines")
+      .contentType(MediaType.APPLICATION_JSON)
+      .content(new ObjectMapper().writeValueAsString([
+        id         : "1",
+        name       : "pipeline-name",
+        application: "application-name",
+      ]))
+    def createPipelineSecondRequest = post("/pipelines")
+      .contentType(MediaType.APPLICATION_JSON)
+      .content(new ObjectMapper().writeValueAsString([
+        id         : "2",
+        name       : "pipeline-name",
+        application: "application-name",
+      ]))
 
-    @Bean
-    PipelineDAO pipelineDAO() {
-      detachedMockFactory.Stub(PipelineDAO)
-    }
+    def mockMvcWithController = MockMvcBuilders.standaloneSetup(new PipelineController(
+      pipelineDAO, new ObjectMapper(), Optional.empty(), [], Optional.empty(), fiatPermissionEvaluator,
+      Optional.of(fiatService), fiatConfigurationProperties, fiatStatus)).build()
+
+    when:
+    def all = Executors.newFixedThreadPool(2).invokeAll(List.of(
+      { -> mockMvcWithController.perform(createPipelineFirstRequest).andReturn().response },
+      { -> mockMvcWithController.perform(createPipelineSecondRequest).andReturn().response },
+    ))
+    then:
+    (all.get(0).get().status == 200 && all.get(1).get().status == 400) || (all.get(0).get().status == 400 && all.get(1).get().status == 200)
+
   }
 
   private class MockValidator implements PipelineValidator {
