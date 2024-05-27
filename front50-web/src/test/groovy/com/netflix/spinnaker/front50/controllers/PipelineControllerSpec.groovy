@@ -8,6 +8,7 @@ import com.netflix.spinnaker.front50.model.pipeline.PipelineDAO
 import com.netflix.spinnaker.kork.web.exceptions.ExceptionMessageDecorator
 import com.netflix.spinnaker.kork.web.exceptions.GenericExceptionHandlers
 import com.netflix.spinnaker.kork.web.exceptions.NotFoundException
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -23,7 +24,6 @@ import spock.lang.Specification
 import spock.lang.Unroll
 import spock.mock.DetachedMockFactory
 
-import jakarta.servlet.http.HttpServletResponse
 import java.util.concurrent.Executors
 import java.util.stream.Collectors
 
@@ -113,7 +113,7 @@ class PipelineControllerSpec extends Specification {
           new ObjectMapper(),
           Optional.empty(),
           [new MockValidator()] as List<PipelineValidator>,
-          Optional.empty(), fiatPermissionEvaluator, fiatService, fiatConfigurationProperties, fiatStatus
+          Optional.empty()
         )
       )
       .setControllerAdvice(
@@ -171,6 +171,38 @@ class PipelineControllerSpec extends Specification {
     response.contentAsString.contains("\"name\":\"test-pipeline\"")
     response.contentAsString.contains("\"application\":\"test-application\"")
     response.contentAsString.contains("\"updateTs\":\"1662644108709\"")
+  }
+
+  @Unroll
+  def "should create pipelines in a thread safe way"() {
+    given:
+    def pipelineDAO = new InMemoryPipelineDAO()
+    def createPipelineFirstRequest = post("/pipelines")
+      .contentType(MediaType.APPLICATION_JSON)
+      .content(new ObjectMapper().writeValueAsString([
+        id         : "1",
+        name       : "pipeline-name",
+        application: "application-name",
+      ]))
+    def createPipelineSecondRequest = post("/pipelines")
+      .contentType(MediaType.APPLICATION_JSON)
+      .content(new ObjectMapper().writeValueAsString([
+        id         : "2",
+        name       : "pipeline-name",
+        application: "application-name",
+      ]))
+
+    def mockMvcWithController = MockMvcBuilders.standaloneSetup(new PipelineController(
+      pipelineDAO, new ObjectMapper(), Optional.empty(), [], Optional.empty())).build()
+
+    when:
+    def all = Executors.newFixedThreadPool(2).invokeAll(List.of(
+      { -> mockMvcWithController.perform(createPipelineFirstRequest).andReturn().response },
+      { -> mockMvcWithController.perform(createPipelineSecondRequest).andReturn().response },
+    ))
+    then:
+    (all.get(0).get().status == 200 && all.get(1).get().status == 400) || (all.get(0).get().status == 400 && all.get(1).get().status == 200)
+
   }
 
   @Configuration
