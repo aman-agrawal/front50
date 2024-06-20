@@ -36,7 +36,7 @@ COPY jaeger/opentelemetry-javaagent.jar /opt/jaeger/opentelemetry-javaagent.jar
 RUN yum -y install  wget 
 
 RUN adduser spinnaker
-RUN mkdir -p {SERVICE_PLUGIN_PATH}
+RUN mkdir -p ${SERVICE_PLUGIN_PATH}
 
 #custom plugin zip files adding
 ARG CUSTOMPLUGIN_RELEASEORG
